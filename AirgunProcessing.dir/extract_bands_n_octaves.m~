@@ -1,0 +1,68 @@
+%%%%%%%%extract_bands_n_octaves%%%%%%%%%%%%%%%%%%%%%%%
+%function [SEL_band,rms_band,freq_band,SEL_third_octave,rms_third_octave]=extract_bands_n_octaves(PP,tduration,Nfft,Fs,bandwidth,freq_third_octave)
+% Mar. 24, 2011: multiplied the power spectral density by 2.
+%   Input: 
+%       PP is either full or half FFT spectrum normalized in terms of PSD (i.e.
+%           2*abs(X).^2/(/(wpwr*Nfft*Fs), where X is raw fft of length Nfft, and
+%           wpwr is energy of windowning function...
+%           Only the first Nfft/2 values of PP are used...
+%       tduration is the duration of the transient (does not have to be Nfft*dt=Nfft/Fs),
+%                   so zero padding of x -> X is allowed.
+%       Nfft: FFT size that was used to compute original PP.
+%       Fs: sampling rate in Hz/second
+%       bandwidth: bandwidth in Hz to compute spectral levels over.
+%       freq_third_octave:  Frequencies over with to compute third-octave
+%           levels.
+%   Output:
+%       SEL_band: Vector containing SEL computed over 'bandwidth' Hz
+%       intervals
+%       rms_band: rms equivalent, sqrt(SEL_band(If)/tduration)
+%       freq_bandwidth: frequencies bounding the SEL and rms band calculations
+%       (Hz)
+%       SEL_third_octave, rms_third_octvae: SEL and rms , third octave bands centered aroudn freq_third_octave.  
+
+function [SEL_band,rms_band,freq_bandwidth,SEL_third_octave,rms_third_octave] ...
+    =extract_bands_n_octaves(PP,tduration,Nfft,Fs,bandwidth,freq_third_octave)
+
+SEL_band=[];
+rms_band=[];
+SEL_third_octave=[];
+rms_third_octave=[];
+
+%Nfft=length(PP); 
+F=linspace(0,Fs,Nfft+1);
+
+%%%%Compute SEL over "bandwidth" Hz frequency spacing%%%%%%%%%%%
+if rem(length(bandwidth),2)==1  %If length of bandwidth odd
+Fvec=round(bandwidth*Nfft/Fs);
+Iff=floor(bandwidth/(Fs/Nfft));
+Fvec=2:Iff:Nfft/2;
+for If=1:(length(Fvec)-1)
+    SEL_band(If)= trapz((PP(Fvec(If):Fvec(If+1))));
+    rms_band(If)= sqrt(SEL_band(If)/tduration);
+end
+freq_bandwidth=F(Fvec);
+
+
+%%%%Compute SEL over third octaves%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if exist('freq_third_octave','var'),
+    %Iff=round(freq_third_octave*Nfft/Fs);
+   % Igood=[];
+    %freq_third=-1*ones(length(freq_third_octave),1);
+    %freq_third_octave=-1*ones(length(freq_third_octave),1);
+
+    for If=1:length(freq_third_octave),
+        Ilow=round(0.794*freq_third_octave(If)*Nfft/Fs);
+        Ihi=round(1.26*freq_third_octave(If)*Nfft/Fs);
+        if Ihi>Nfft/2|Ilow<=0,
+            continue;
+        end
+        %Igood=[Igood If];
+        SEL_third_octave(If)=trapz((PP(Ilow:Ihi)));
+        rms_third_octave(If)= sqrt(SEL_third_octave(If)/tduration);
+    end
+   
+end
+
+%keyboard;
+end
